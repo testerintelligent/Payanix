@@ -43,7 +43,7 @@ pipeline {
             steps {
                 script {
                     // Map the Jenkins choice ('dev'/'prod'/'newman-dev'/'newman-prod') to the
-                    // Postman environment file suffix, so newman uses workReady-Local or workReady-Remote.
+                    // Postman environment file suffix, so newman uses Payanix-Local or Payanix-Remote.
                     def newmanEnv = (params.ENVIRONMENT in ['dev', 'newman-dev']) ? 'Local' : 'Remote'
                     echo "Running Newman with NEWMAN_ENV=${newmanEnv}"
                     sh """

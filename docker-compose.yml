@@ -51,9 +51,9 @@
       entrypoint:
         - newman
         - run
-        - WorkReady.postman_collection.json
+        - Payanix.postman_collection.json
         - -e
-        - workReady-${NEWMAN_ENV:-Local}.postman_environment.json
+        - Payanix-${NEWMAN_ENV:-Local}.postman_environment.json
         - -n
         - "100"
       profiles:
