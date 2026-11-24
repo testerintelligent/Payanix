@@ -37,12 +37,14 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import LogoutIcon from "@mui/icons-material/Logout";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
+import ChangeHistoryIcon from "@mui/icons-material/ChangeHistory";
 import { exportToExcel } from "./exportToExcel";
 import Login from "./Login";
 import ExecutiveDashboard from "./ExecutiveDashboard";
 import CandidateAssessment, { Candidate } from "./CandidateAssessment";
 import CandidateSummary from "./CandidateSummary";
 import SelectedCandidates from "./SelectedCandidates";
+import Prism from "./Prism";
 import { useElementHeight } from "./useElementHeight";
 import "./App.css";
 
@@ -86,7 +88,7 @@ function App() {
     projectName: projectNameOptions[0],
   });
   const [editId, setEditId] = useState<string | null>(null);
-  const [section, setSection] = useState<"home" | "training" | "hiring" | "onboarding">(
+  const [section, setSection] = useState<"home" | "training" | "hiring" | "onboarding" | "prism">(
     "home"
   );
   const [showHome, setShowHome] = useState(true);
@@ -98,6 +100,7 @@ function App() {
   const [showCandidateSummary, setShowCandidateSummary] = useState(false);
   const [showSelectedCandidates, setShowSelectedCandidates] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showPrism, setShowPrism] = useState(false);
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
@@ -366,6 +369,7 @@ function App() {
     setShowCandidateSummary(false);
     setShowSelectedCandidates(false);
     setShowOnboarding(false);
+    setShowPrism(false);
   };
 
   const handleGoHome = () => {
@@ -571,7 +575,7 @@ function App() {
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gridTemplateColumns: "repeat(2, 1fr)",
                     gap: "31px",
                   }}
                 >
@@ -735,10 +739,64 @@ function App() {
                       Onboard people to a project
                     </Typography>
                   </Box>
+                  <Box
+                    onClick={() => {
+                      resetViews();
+                      setSection("prism");
+                      setShowPrism(true);
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      background: "#ffffff",
+                      borderRadius: 4,
+                      border: "1px solid #E7E3F1",
+                      boxShadow: "0 4px 24px rgba(0, 106, 113, 0.08)",
+                      p: 5.2,
+                      textAlign: "center",
+                      animation:
+                        "zoomInCard 1s ease-out 0.45s backwards",
+                      transition:
+                        "transform 0.15s ease, box-shadow 0.15s ease",
+                      "&:hover": {
+                        transform: "translateY(-4px) scale(1.05)",
+                        boxShadow: "0 8px 28px rgba(104, 70, 198, 0.18)",
+                      },
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        bgcolor: "#F0EBFB",
+                        color: "#6846C6",
+                        width: 73,
+                        height: 73,
+                        mx: "auto",
+                        mb: 2,
+                      }}
+                    >
+                      <ChangeHistoryIcon sx={{ fontSize: 31 }} />
+                    </Avatar>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        color: "#1B1339",
+                        fontSize: "1.625rem",
+                      }}
+                    >
+                      PRISM
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "#6B7280", mt: 0.5, fontSize: "1.14rem" }}
+                    >
+                      Open the PRISM workspace
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Box>
           )}
+          {showPrism && <Prism />}
           {showOnboarding && (
             <Typography
               variant="h6"
