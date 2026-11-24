@@ -291,6 +291,30 @@ app.delete('/api/candidates/candidate/:candidateId', async (req, res) => {
   res.json({ deletedCount: result.deletedCount });
 });
 
+// PRISM session schema (stored in the "prism" collection of the training database)
+const prismSchema = new mongoose.Schema({
+  sessionDate: { type: Date, required: true },
+  presenterName: { type: String, required: true, trim: true },
+  activityType: { type: String, enum: ['Practice', 'Assessment', 'Mentoring'], required: true },
+  attendance: { type: String, enum: ['Present', 'Absent'], required: true },
+}, { timestamps: true });
+const Prism = mongoose.model('Prism', prismSchema, 'prism');
+
+app.get('/api/prism', async (req, res) => {
+  const records = await Prism.find().sort({ sessionDate: -1, createdAt: -1 });
+  res.json(records);
+});
+
+app.post('/api/prism', async (req, res) => {
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error: 'Request body is required.' });
+  }
+  const { sessionDate, presenterName, activityType, attendance } = req.body;
+  const record = new Prism({ sessionDate, presenterName, activityType, attendance });
+  await record.save();
+  res.status(201).json(record);
+});
+
 // Swagger API documentation
 const swaggerOptions = {
   definition: {
