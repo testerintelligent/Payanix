@@ -155,7 +155,7 @@ function Login({ onLogin }: LoginProps) {
               <WorkspacePremiumIcon sx={{ fontSize: 28 }} />
             </Avatar>
             <Typography variant="h5" sx={{ fontWeight: 700, color: "#1B1339" }}>
-              Welcome Back
+              Welcome Expleon
             </Typography>
             <Typography variant="body2" sx={{ color: "#6B7280", mt: 0.5 }}>
               Sign in to continue
