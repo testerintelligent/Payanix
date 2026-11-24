@@ -291,14 +291,19 @@ app.delete('/api/candidates/candidate/:candidateId', async (req, res) => {
   res.json({ deletedCount: result.deletedCount });
 });
 
-// PRISM session schema (stored in the "prism" collection of the training database)
+// Separate MongoDB connection for the PRISM database
+const prismConnection = mongoose.createConnection(process.env.PRISM_MONGODB_URI);
+prismConnection.on('error', console.error.bind(console, 'MongoDB connection error (prism):'));
+prismConnection.once('open', () => console.log('Connected to MongoDB - prism'));
+
+// PRISM session schema (stored in the "prism" collection of the PRISM database)
 const prismSchema = new mongoose.Schema({
   sessionDate: { type: Date, required: true },
   presenterName: { type: String, required: true, trim: true },
   activityType: { type: String, enum: ['Practice', 'Assessment', 'Mentoring'], required: true },
   attendance: { type: String, enum: ['Present', 'Absent'], required: true },
 }, { timestamps: true });
-const Prism = mongoose.model('Prism', prismSchema, 'prism');
+const Prism = prismConnection.model('Prism', prismSchema, 'prism');
 
 app.get('/api/prism', async (req, res) => {
   const records = await Prism.find().sort({ sessionDate: -1, createdAt: -1 });
