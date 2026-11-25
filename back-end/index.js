@@ -300,6 +300,7 @@ prismConnection.once('open', () => console.log('Connected to MongoDB - prism'));
 const prismSchema = new mongoose.Schema({
   sessionDate: { type: Date, required: true },
   presenterName: { type: String, required: true, trim: true },
+  mentorName: { type: String, required: true, trim: true },
   activityType: { type: String, enum: ['Practice', 'Assessment', 'Mentoring'], required: true },
   attendance: { type: String, enum: ['Present', 'Absent'], required: true },
 }, { timestamps: true });
@@ -314,8 +315,8 @@ app.post('/api/prism', async (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).json({ error: 'Request body is required.' });
   }
-  const { sessionDate, presenterName, activityType, attendance } = req.body;
-  const record = new Prism({ sessionDate, presenterName, activityType, attendance });
+  const { sessionDate, presenterName, mentorName, activityType, attendance } = req.body;
+  const record = new Prism({ sessionDate, presenterName, mentorName, activityType, attendance });
   await record.save();
   res.status(201).json(record);
 });

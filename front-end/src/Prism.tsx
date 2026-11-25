@@ -25,6 +25,7 @@ interface PrismRecord {
   _id?: string;
   sessionDate: string;
   presenterName: string;
+  mentorName: string;
   activityType: string;
   attendance: string;
 }
@@ -40,6 +41,7 @@ const today = () => {
 const emptyForm = (): PrismRecord => ({
   sessionDate: today(),
   presenterName: "",
+  mentorName: "",
   activityType: "",
   attendance: "",
 });
@@ -70,6 +72,7 @@ const Prism: React.FC = () => {
   const isValid =
     form.sessionDate &&
     form.presenterName.trim() &&
+    form.mentorName.trim() &&
     form.activityType &&
     form.attendance;
 
@@ -79,7 +82,11 @@ const Prism: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
-      await axios.post(API_URL, { ...form, presenterName: form.presenterName.trim() });
+      await axios.post(API_URL, {
+        ...form,
+        presenterName: form.presenterName.trim(),
+        mentorName: form.mentorName.trim(),
+      });
       setMessage({ type: "success", text: "PRISM entry saved." });
       setForm(emptyForm());
       fetchRecords();
@@ -113,7 +120,7 @@ const Prism: React.FC = () => {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(5, 1fr)" },
             gap: 2,
           }}
         >
@@ -132,6 +139,13 @@ const Prism: React.FC = () => {
             required
             value={form.presenterName}
             onChange={handleChange("presenterName")}
+          />
+          <TextField
+            label="Mentor Name"
+            size="small"
+            required
+            value={form.mentorName}
+            onChange={handleChange("mentorName")}
           />
           <TextField
             select
@@ -197,6 +211,7 @@ const Prism: React.FC = () => {
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Session Date</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Presenter Name</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Mentor Name</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Activity Type</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Attendance</TableCell>
             </TableRow>
@@ -204,7 +219,7 @@ const Prism: React.FC = () => {
           <TableBody>
             {records.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ color: "#6B7280" }}>
+                <TableCell colSpan={5} align="center" sx={{ color: "#6B7280" }}>
                   No PRISM entries yet
                 </TableCell>
               </TableRow>
@@ -213,6 +228,7 @@ const Prism: React.FC = () => {
                 <TableRow key={r._id}>
                   <TableCell>{new Date(r.sessionDate).toLocaleDateString(undefined, { timeZone: "UTC" })}</TableCell>
                   <TableCell>{r.presenterName}</TableCell>
+                  <TableCell>{r.mentorName}</TableCell>
                   <TableCell>{r.activityType}</TableCell>
                   <TableCell>{r.attendance}</TableCell>
                 </TableRow>
