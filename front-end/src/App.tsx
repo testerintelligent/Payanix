@@ -45,6 +45,8 @@ import CandidateAssessment, { Candidate } from "./CandidateAssessment";
 import CandidateSummary from "./CandidateSummary";
 import SelectedCandidates from "./SelectedCandidates";
 import Prism from "./Prism";
+import PrismSummary from "./PrismSummary";
+import { PrismRecord } from "./prismShared";
 import { useElementHeight } from "./useElementHeight";
 import "./App.css";
 
@@ -101,6 +103,9 @@ function App() {
   const [showSelectedCandidates, setShowSelectedCandidates] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPrism, setShowPrism] = useState(false);
+  const [showPrismSummary, setShowPrismSummary] = useState(false);
+  // PRISM record being edited in the PRISM form (null = creating a new entry).
+  const [editingPrism, setEditingPrism] = useState<PrismRecord | null>(null);
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
@@ -370,6 +375,7 @@ function App() {
     setShowSelectedCandidates(false);
     setShowOnboarding(false);
     setShowPrism(false);
+    setShowPrismSummary(false);
   };
 
   const handleGoHome = () => {
@@ -468,6 +474,31 @@ function App() {
         resetViews();
         setSection("hiring");
         setShowSelectedCandidates(true);
+      },
+    },
+    {
+      key: "prismEntry",
+      label: "PRISM Entry",
+      icon: <AddCircleIcon />,
+      active: showPrism,
+      section: "prism" as const,
+      onClick: () => {
+        resetViews();
+        setEditingPrism(null);
+        setSection("prism");
+        setShowPrism(true);
+      },
+    },
+    {
+      key: "prismSummary",
+      label: "PRISM Summary",
+      icon: <SummarizeIcon />,
+      active: showPrismSummary,
+      section: "prism" as const,
+      onClick: () => {
+        resetViews();
+        setSection("prism");
+        setShowPrismSummary(true);
       },
     },
   ];
@@ -742,6 +773,7 @@ function App() {
                   <Box
                     onClick={() => {
                       resetViews();
+                      setEditingPrism(null);
                       setSection("prism");
                       setShowPrism(true);
                     }}
@@ -796,7 +828,25 @@ function App() {
               </Box>
             </Box>
           )}
-          {showPrism && <Prism />}
+          {showPrism && (
+            <Prism
+              editingRecord={editingPrism}
+              onEditDone={() => {
+                setEditingPrism(null);
+                resetViews();
+                setShowPrismSummary(true);
+              }}
+            />
+          )}
+          {showPrismSummary && (
+            <PrismSummary
+              onEdit={(record) => {
+                setEditingPrism(record);
+                resetViews();
+                setShowPrism(true);
+              }}
+            />
+          )}
           {showOnboarding && (
             <Typography
               variant="h6"

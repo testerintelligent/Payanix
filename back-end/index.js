@@ -318,23 +318,37 @@ app.get('/api/prism', async (req, res) => {
   res.json(records);
 });
 
-app.post('/api/prism', async (req, res) => {
-  if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: 'Request body is required.' });
+// Picks the allowed PRISM fields from a request body and checks the ratings.
+// Returns { data } on success or { error } with a message for a 400 response.
+const parsePrismBody = (body) => {
+  if (!body || Object.keys(body).length === 0) {
+    return { error: 'Request body is required.' };
   }
   const {
     sessionDate, presenterName, mentorName, activityType, attendance,
     confidence, clarity, sentenceFormation, grammar, pronunciation, areaOfImprovement,
-  } = req.body;
+  } = body;
   const ratings = { confidence, clarity, sentenceFormation, grammar, pronunciation };
   for (const [field, value] of Object.entries(ratings)) {
     if (!Number.isInteger(Number(value)) || value === '' || value == null) {
-      return res.status(400).json({ error: `${field} must be a whole number from 1 to 5.` });
+      return { error: `${field} must be a whole number from 1 to 5.` };
     }
   }
-  const record = new Prism({
-    sessionDate, presenterName, mentorName, activityType, attendance, ...ratings, areaOfImprovement,
-  });
+  return {
+    data: { sessionDate, presenterName, mentorName, activityType, attendance, ...ratings, areaOfImprovement },
+  };
+};
+
+app.get('/api/prism/:id', async (req, res) => {
+  const record = await Prism.findById(req.params.id);
+  if (!record) return res.status(404).json({ error: 'PRISM entry not found.' });
+  res.json(record);
+});
+
+app.post('/api/prism', async (req, res) => {
+  const { data, error } = parsePrismBody(req.body);
+  if (error) return res.status(400).json({ error });
+  const record = new Prism(data);
   try {
     await record.save();
   } catch (err) {
@@ -344,6 +358,22 @@ app.post('/api/prism', async (req, res) => {
     throw err;
   }
   res.status(201).json(record);
+});
+
+app.put('/api/prism/:id', async (req, res) => {
+  const { data, error } = parsePrismBody(req.body);
+  if (error) return res.status(400).json({ error });
+  let record;
+  try {
+    record = await Prism.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true });
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
+  if (!record) return res.status(404).json({ error: 'PRISM entry not found.' });
+  res.json(record);
 });
 
 // Swagger API documentation

@@ -1,52 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Alert, Box, Button, MenuItem, Paper, TextField, Typography } from "@mui/material";
 import {
-  Alert,
-  Box,
-  Button,
-  MenuItem,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
-
-const API_URL = `${process.env.REACT_APP_API_BASE_URL}/api/prism`;
-
-const activityTypes = ["Practice", "Assessment", "Mentoring"];
-const attendanceOptions = ["Present", "Absent"];
-const ratingOptions = [1, 2, 3, 4, 5];
-
-const ratingFields = [
-  { key: "confidence", label: "Confidence" },
-  { key: "clarity", label: "Clarity" },
-  { key: "sentenceFormation", label: "Sentence Formation" },
-  { key: "grammar", label: "Grammar" },
-  { key: "pronunciation", label: "Pronunciation" },
-] as const;
-
-type RatingKey = (typeof ratingFields)[number]["key"];
-
-interface PrismRecord {
-  _id?: string;
-  sessionDate: string;
-  presenterName: string;
-  mentorName: string;
-  activityType: string;
-  attendance: string;
-  // Ratings are kept as strings in the form ("" = not selected) and sent as numbers.
-  confidence: string | number;
-  clarity: string | number;
-  sentenceFormation: string | number;
-  grammar: string | number;
-  pronunciation: string | number;
-  areaOfImprovement: string;
-}
+  PRISM_API_URL,
+  PrismRecord,
+  activityTypes,
+  attendanceOptions,
+  ratingFields,
+  ratingOptions,
+} from "./prismShared";
 
 // Today's date as YYYY-MM-DD in the user's local time zone
 // (toISOString() would use UTC and can be off by a day).
@@ -70,24 +32,36 @@ const emptyForm = (): PrismRecord => ({
   areaOfImprovement: "",
 });
 
-const Prism: React.FC = () => {
-  const [form, setForm] = useState<PrismRecord>(emptyForm);
-  const [records, setRecords] = useState<PrismRecord[]>([]);
+// Converts a record loaded from the API into the form's string-based shape.
+const toFormValues = (r: PrismRecord): PrismRecord => ({
+  ...emptyForm(),
+  ...r,
+  sessionDate: r.sessionDate ? r.sessionDate.slice(0, 10) : today(),
+  areaOfImprovement: r.areaOfImprovement ?? "",
+  ...Object.fromEntries(
+    ratingFields.map(({ key }) => [key, r[key] == null ? "" : String(r[key])])
+  ),
+});
+
+interface PrismProps {
+  // When set, the form edits this record instead of creating a new one.
+  editingRecord?: PrismRecord | null;
+  // Called after an edit is saved or cancelled.
+  onEditDone?: () => void;
+}
+
+const Prism: React.FC<PrismProps> = ({ editingRecord, onEditDone }) => {
+  const isEditing = Boolean(editingRecord?._id);
+  const [form, setForm] = useState<PrismRecord>(() =>
+    editingRecord ? toFormValues(editingRecord) : emptyForm()
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const fetchRecords = async () => {
-    try {
-      const res = await axios.get<PrismRecord[]>(API_URL);
-      setRecords(res.data);
-    } catch {
-      setMessage({ type: "error", text: "Could not load PRISM records." });
-    }
-  };
-
   useEffect(() => {
-    fetchRecords();
-  }, []);
+    setForm(editingRecord ? toFormValues(editingRecord) : emptyForm());
+    setMessage(null);
+  }, [editingRecord]);
 
   const handleChange =
     (field: keyof PrismRecord) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -106,17 +80,24 @@ const Prism: React.FC = () => {
     if (!isValid) return;
     setSaving(true);
     setMessage(null);
+    const payload = {
+      sessionDate: form.sessionDate,
+      presenterName: form.presenterName.trim(),
+      mentorName: form.mentorName.trim(),
+      activityType: form.activityType,
+      attendance: form.attendance,
+      areaOfImprovement: form.areaOfImprovement.trim(),
+      ...Object.fromEntries(ratingFields.map(({ key }) => [key, Number(form[key])])),
+    };
     try {
-      await axios.post(API_URL, {
-        ...form,
-        presenterName: form.presenterName.trim(),
-        mentorName: form.mentorName.trim(),
-        areaOfImprovement: form.areaOfImprovement.trim(),
-        ...Object.fromEntries(ratingFields.map(({ key }) => [key, Number(form[key])])),
-      });
+      if (isEditing) {
+        await axios.put(`${PRISM_API_URL}/${editingRecord!._id}`, payload);
+        onEditDone?.();
+        return;
+      }
+      await axios.post(PRISM_API_URL, payload);
       setMessage({ type: "success", text: "PRISM entry saved." });
       setForm(emptyForm());
-      fetchRecords();
     } catch (err: any) {
       setMessage({
         type: "error",
@@ -130,7 +111,7 @@ const Prism: React.FC = () => {
   return (
     <Box sx={{ mt: 2 }}>
       <Typography variant="h6" sx={{ color: "#6846C6", fontWeight: 700, mb: 2 }}>
-        PRISM
+        {isEditing ? "Edit PRISM Entry" : "PRISM"}
       </Typography>
 
       <Paper
@@ -247,23 +228,29 @@ const Prism: React.FC = () => {
         />
 
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setForm(emptyForm());
-              setMessage(null);
-            }}
-            disabled={saving}
-          >
-            Clear
-          </Button>
+          {isEditing ? (
+            <Button variant="outlined" onClick={() => onEditDone?.()} disabled={saving}>
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setForm(emptyForm());
+                setMessage(null);
+              }}
+              disabled={saving}
+            >
+              Clear
+            </Button>
+          )}
           <Button
             type="submit"
             variant="contained"
             disabled={!isValid || saving}
             sx={{ bgcolor: "#6846C6", "&:hover": { bgcolor: "#5636B0" } }}
           >
-            {saving ? "Saving..." : "Submit"}
+            {saving ? "Saving..." : isEditing ? "Update" : "Submit"}
           </Button>
         </Box>
 
@@ -273,53 +260,6 @@ const Prism: React.FC = () => {
           </Alert>
         )}
       </Paper>
-
-      <TableContainer component={Paper} sx={{ borderRadius: 3, border: "1px solid #E7E3F1" }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700 }}>Session Date</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Presenter Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Mentor Name</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Activity Type</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Attendance</TableCell>
-              {ratingFields.map(({ key, label }) => (
-                <TableCell key={key} sx={{ fontWeight: 700 }} align="center">
-                  {label}
-                </TableCell>
-              ))}
-              <TableCell sx={{ fontWeight: 700 }}>Area of Improvement</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6 + ratingFields.length} align="center" sx={{ color: "#6B7280" }}>
-                  No PRISM entries yet
-                </TableCell>
-              </TableRow>
-            ) : (
-              records.map((r) => (
-                <TableRow key={r._id}>
-                  <TableCell>{new Date(r.sessionDate).toLocaleDateString(undefined, { timeZone: "UTC" })}</TableCell>
-                  <TableCell>{r.presenterName}</TableCell>
-                  <TableCell>{r.mentorName}</TableCell>
-                  <TableCell>{r.activityType}</TableCell>
-                  <TableCell>{r.attendance}</TableCell>
-                  {ratingFields.map(({ key }) => (
-                    <TableCell key={key} align="center">
-                      {r[key as RatingKey] ?? "-"}
-                    </TableCell>
-                  ))}
-                  <TableCell sx={{ minWidth: 200, maxWidth: 320, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                    {r.areaOfImprovement || "-"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
     </Box>
   );
 };
