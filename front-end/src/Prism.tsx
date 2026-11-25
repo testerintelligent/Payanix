@@ -20,6 +20,17 @@ const API_URL = `${process.env.REACT_APP_API_BASE_URL}/api/prism`;
 
 const activityTypes = ["Practice", "Assessment", "Mentoring"];
 const attendanceOptions = ["Present", "Absent"];
+const ratingOptions = [1, 2, 3, 4, 5];
+
+const ratingFields = [
+  { key: "confidence", label: "Confidence" },
+  { key: "clarity", label: "Clarity" },
+  { key: "sentenceFormation", label: "Sentence Formation" },
+  { key: "grammar", label: "Grammar" },
+  { key: "pronunciation", label: "Pronunciation" },
+] as const;
+
+type RatingKey = (typeof ratingFields)[number]["key"];
 
 interface PrismRecord {
   _id?: string;
@@ -28,6 +39,13 @@ interface PrismRecord {
   mentorName: string;
   activityType: string;
   attendance: string;
+  // Ratings are kept as strings in the form ("" = not selected) and sent as numbers.
+  confidence: string | number;
+  clarity: string | number;
+  sentenceFormation: string | number;
+  grammar: string | number;
+  pronunciation: string | number;
+  areaOfImprovement: string;
 }
 
 // Today's date as YYYY-MM-DD in the user's local time zone
@@ -44,6 +62,12 @@ const emptyForm = (): PrismRecord => ({
   mentorName: "",
   activityType: "",
   attendance: "",
+  confidence: "",
+  clarity: "",
+  sentenceFormation: "",
+  grammar: "",
+  pronunciation: "",
+  areaOfImprovement: "",
 });
 
 const Prism: React.FC = () => {
@@ -74,7 +98,8 @@ const Prism: React.FC = () => {
     form.presenterName.trim() &&
     form.mentorName.trim() &&
     form.activityType &&
-    form.attendance;
+    form.attendance &&
+    ratingFields.every(({ key }) => form[key] !== "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +111,8 @@ const Prism: React.FC = () => {
         ...form,
         presenterName: form.presenterName.trim(),
         mentorName: form.mentorName.trim(),
+        areaOfImprovement: form.areaOfImprovement.trim(),
+        ...Object.fromEntries(ratingFields.map(({ key }) => [key, Number(form[key])])),
       });
       setMessage({ type: "success", text: "PRISM entry saved." });
       setForm(emptyForm());
@@ -177,6 +204,48 @@ const Prism: React.FC = () => {
           </TextField>
         </Box>
 
+        <Typography variant="subtitle2" sx={{ color: "#6846C6", fontWeight: 700, mt: 3, mb: 1.5 }}>
+          Ratings (1 = lowest, 5 = highest)
+        </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(5, 1fr)" },
+            gap: 2,
+          }}
+        >
+          {ratingFields.map(({ key, label }) => (
+            <TextField
+              key={key}
+              select
+              label={label}
+              size="small"
+              required
+              value={form[key]}
+              onChange={handleChange(key)}
+            >
+              {ratingOptions.map((n) => (
+                <MenuItem key={n} value={String(n)}>
+                  {n}
+                </MenuItem>
+              ))}
+            </TextField>
+          ))}
+        </Box>
+
+        <TextField
+          label="Area of Improvement"
+          multiline
+          minRows={4}
+          fullWidth
+          size="small"
+          value={form.areaOfImprovement}
+          onChange={handleChange("areaOfImprovement")}
+          inputProps={{ maxLength: 2000 }}
+          helperText={`${form.areaOfImprovement.length}/2000`}
+          sx={{ mt: 3 }}
+        />
+
         <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
           <Button
             variant="outlined"
@@ -214,12 +283,18 @@ const Prism: React.FC = () => {
               <TableCell sx={{ fontWeight: 700 }}>Mentor Name</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Activity Type</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Attendance</TableCell>
+              {ratingFields.map(({ key, label }) => (
+                <TableCell key={key} sx={{ fontWeight: 700 }} align="center">
+                  {label}
+                </TableCell>
+              ))}
+              <TableCell sx={{ fontWeight: 700 }}>Area of Improvement</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {records.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ color: "#6B7280" }}>
+                <TableCell colSpan={6 + ratingFields.length} align="center" sx={{ color: "#6B7280" }}>
                   No PRISM entries yet
                 </TableCell>
               </TableRow>
@@ -231,6 +306,14 @@ const Prism: React.FC = () => {
                   <TableCell>{r.mentorName}</TableCell>
                   <TableCell>{r.activityType}</TableCell>
                   <TableCell>{r.attendance}</TableCell>
+                  {ratingFields.map(({ key }) => (
+                    <TableCell key={key} align="center">
+                      {r[key as RatingKey] ?? "-"}
+                    </TableCell>
+                  ))}
+                  <TableCell sx={{ minWidth: 200, maxWidth: 320, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                    {r.areaOfImprovement || "-"}
+                  </TableCell>
                 </TableRow>
               ))
             )}

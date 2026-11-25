@@ -303,6 +303,13 @@ const prismSchema = new mongoose.Schema({
   mentorName: { type: String, required: true, trim: true },
   activityType: { type: String, enum: ['Practice', 'Assessment', 'Mentoring'], required: true },
   attendance: { type: String, enum: ['Present', 'Absent'], required: true },
+  // Ratings on a 1-5 scale
+  confidence: { type: Number, min: 1, max: 5, required: true },
+  clarity: { type: Number, min: 1, max: 5, required: true },
+  sentenceFormation: { type: Number, min: 1, max: 5, required: true },
+  grammar: { type: Number, min: 1, max: 5, required: true },
+  pronunciation: { type: Number, min: 1, max: 5, required: true },
+  areaOfImprovement: { type: String, trim: true, maxlength: 2000, default: '' },
 }, { timestamps: true });
 const Prism = prismConnection.model('Prism', prismSchema, 'prism');
 
@@ -315,9 +322,27 @@ app.post('/api/prism', async (req, res) => {
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).json({ error: 'Request body is required.' });
   }
-  const { sessionDate, presenterName, mentorName, activityType, attendance } = req.body;
-  const record = new Prism({ sessionDate, presenterName, mentorName, activityType, attendance });
-  await record.save();
+  const {
+    sessionDate, presenterName, mentorName, activityType, attendance,
+    confidence, clarity, sentenceFormation, grammar, pronunciation, areaOfImprovement,
+  } = req.body;
+  const ratings = { confidence, clarity, sentenceFormation, grammar, pronunciation };
+  for (const [field, value] of Object.entries(ratings)) {
+    if (!Number.isInteger(Number(value)) || value === '' || value == null) {
+      return res.status(400).json({ error: `${field} must be a whole number from 1 to 5.` });
+    }
+  }
+  const record = new Prism({
+    sessionDate, presenterName, mentorName, activityType, attendance, ...ratings, areaOfImprovement,
+  });
+  try {
+    await record.save();
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: err.message });
+    }
+    throw err;
+  }
   res.status(201).json(record);
 });
 
