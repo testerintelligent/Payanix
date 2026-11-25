@@ -376,6 +376,12 @@ app.put('/api/prism/:id', async (req, res) => {
   res.json(record);
 });
 
+app.delete('/api/prism/:id', async (req, res) => {
+  const record = await Prism.findByIdAndDelete(req.params.id);
+  if (!record) return res.status(404).json({ error: 'PRISM entry not found.' });
+  res.status(204).end();
+});
+
 // Swagger API documentation
 const swaggerOptions = {
   definition: {

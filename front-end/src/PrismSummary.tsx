@@ -20,6 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { PRISM_API_URL, PrismRecord, formatSessionDate, ratingFields } from "./prismShared";
 
@@ -31,6 +32,24 @@ const PrismSummary: React.FC<PrismSummaryProps> = ({ onEdit }) => {
   const [records, setRecords] = useState<PrismRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<PrismRecord | null>(null);
+  const [deleting, setDeleting] = useState<PrismRecord | null>(null);
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleting?._id) return;
+    setDeleteInProgress(true);
+    setError(null);
+    try {
+      await axios.delete(`${PRISM_API_URL}/${deleting._id}`);
+      setRecords((rs) => rs.filter((r) => r._id !== deleting._id));
+      setDeleting(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Could not delete PRISM entry.");
+      setDeleting(null);
+    } finally {
+      setDeleteInProgress(false);
+    }
+  };
 
   useEffect(() => {
     axios
@@ -127,6 +146,11 @@ const PrismSummary: React.FC<PrismSummaryProps> = ({ onEdit }) => {
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => setDeleting(r)} sx={{ color: "#D32F2F" }}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))
@@ -164,6 +188,36 @@ const PrismSummary: React.FC<PrismSummaryProps> = ({ onEdit }) => {
           </Button>
           <Button onClick={() => setViewing(null)} variant="contained" sx={{ bgcolor: "#6846C6", "&:hover": { bgcolor: "#5636B0" } }}>
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleting)}
+        onClose={() => !deleteInProgress && setDeleting(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Delete PRISM entry?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            This permanently deletes the entry for{" "}
+            <strong>{deleting?.presenterName}</strong> on{" "}
+            <strong>{deleting ? formatSessionDate(deleting.sessionDate) : ""}</strong>. This can't be
+            undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleting(null)} disabled={deleteInProgress}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deleteInProgress}
+          >
+            {deleteInProgress ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>
